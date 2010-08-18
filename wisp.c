@@ -7,7 +7,7 @@ typedef enum { FALSE, TRUE } bool;
 
 /******************** MODEL ********************/
 
-typedef enum { FIXNUM, BOOLEAN } object_type;
+typedef enum { FIXNUM, BOOLEAN, CHARACTER } object_type;
 
 typedef struct {
     object_type type;
@@ -19,6 +19,10 @@ typedef struct {
         struct {
             bool value;
         } boolean;
+
+	struct {
+	    char value;
+	} character;
     } data;
 } object;
 
@@ -139,7 +143,7 @@ object* read(FILE *in) {
     }
 
     else if (c == '#') {
-        c = getc(in);
+	c = getc(in);
         switch (c) {
             case 't':
                 return true;
@@ -197,4 +201,3 @@ int main(void) {
 
     return 0;
 }
-
