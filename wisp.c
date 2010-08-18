@@ -3,9 +3,11 @@
 #include <string.h>
 #include <ctype.h>
 
+typedef enum { FALSE, TRUE } bool;
+
 /******************** MODEL ********************/
 
-typedef enum { FIXNUM } object_type;
+typedef enum { FIXNUM, BOOLEAN } object_type;
 
 typedef struct {
     object_type type;
@@ -13,6 +15,10 @@ typedef struct {
         struct {
             long value;
         } fixnum;
+
+        struct {
+            bool value;
+        } boolean;
     } data;
 } object;
 
@@ -37,13 +43,38 @@ object* make_fixnum(long value) {
     return obj;
 }
 
-char is_fixnum(object *obj) {
+bool is_fixnum(object *obj) {
     return obj->type == FIXNUM;
+}
+
+object *true;
+object *false;
+
+bool is_boolean(object *obj) {
+    return obj->type == BOOLEAN;
+}
+
+bool is_false(object *obj) {
+    return obj == false;
+}
+
+bool is_true(object *obj) {
+    return !is_false(obj);
+}
+
+void init(void) {
+    false = alloc_object();
+    false->type = BOOLEAN;
+    false->data.boolean.value = FALSE;
+
+    true = alloc_object();
+    true->type = BOOLEAN;
+    true->data.boolean.value = TRUE;
 }
 
 /******************** READ ********************/
 
-char is_delimiter(int c) {
+bool is_delimiter(int c) {
     return isspace(c) || c == EOF ||
         c == '(' || c == ')' ||
         c == '"' || c == ';';
@@ -106,6 +137,20 @@ object* read(FILE *in) {
             exit(1);
         }
     }
+
+    else if (c == '#') {
+        c = getc(in);
+        switch (c) {
+            case 't':
+                return true;
+            case 'f':
+                return false;
+            default:
+                fprintf(stderr, "unknown boolean literal\n");
+                exit(1);
+        }
+    }
+
     else {
         fprintf(stderr, "bad input. unexpected '%c'\n", c);
         exit(1);
@@ -128,8 +173,11 @@ void print(object *obj) {
         case FIXNUM:
             printf("%ld", obj->data.fixnum.value);
             break;
+        case BOOLEAN:
+            printf("#%c", is_true(obj) ? 't' : 'f');
+            break;
         default:
-            fprintf(stderr, "cannot write unknown type\n");
+            fprintf(stderr, "cannot print unknown type\n");
             exit(1);
     }
 }
@@ -138,6 +186,8 @@ void print(object *obj) {
 
 int main(void) {
     printf("Welcome to Walrus Lisp. Use ctrl-c to exit.\n");
+
+    init();
 
     while (1) {
         printf("> ");
