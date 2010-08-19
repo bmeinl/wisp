@@ -3,11 +3,13 @@
 #include <string.h>
 #include <ctype.h>
 
+#define BUFFER_MAX 1000
+
 typedef enum { FALSE, TRUE } bool;
 
 /******************** MODEL ********************/
 
-typedef enum { FIXNUM, BOOLEAN, CHARACTER } object_type;
+typedef enum { FIXNUM, BOOLEAN, STRING, CHARACTER } object_type;
 
 typedef struct {
     object_type type;
@@ -15,14 +17,15 @@ typedef struct {
         struct {
             long value;
         } fixnum;
-
         struct {
             bool value;
         } boolean;
-
-	struct {
-	    char value;
-	} character;
+        struct {
+            char *value;
+        } string;
+    	struct {
+	        char value;
+    	} character;
     } data;
 } object;
 
@@ -64,6 +67,42 @@ bool is_false(object *obj) {
 
 bool is_true(object *obj) {
     return !is_false(obj);
+}
+
+object* make_string(char *value) {
+    object *obj;
+
+    obj = alloc_object();
+    obj->type = STRING;
+    obj->data.string.value = malloc(strlen(value) + 1); /* 1 extra for \0 */
+    if (obj->data.string.value == NULL) {
+        fprintf(stderr, "out of memory\n");
+        exit(1);
+    }
+    strcpy(obj->data.string.value, value);
+    return obj;
+}
+
+bool is_string(object *obj) {
+    return obj->type == STRING;
+}
+
+object* make_character(char value) {
+    object *obj;
+
+    obj = alloc_object();
+    obj->type = CHARACTER;
+    obj->data.character.value = malloc(1); /* 1 extra for \0 */
+    if (obj->data.character.value == NULL) {
+        fprintf(stderr, "out of memory\n");
+        exit(1);
+    }
+    strcpy(obj->data.character.value, value);
+    return obj;
+}
+
+bool is_character(object *obj) {
+    return obj->type == CHARACTER;
 }
 
 void init(void) {
@@ -112,6 +151,8 @@ object* read(FILE *in) {
     int c;
     short sign = 1;
     long num = 0;
+    int i;
+    char buffer[BUFFER_MAX];
 
     eat_whitespace(in);
 
@@ -143,7 +184,9 @@ object* read(FILE *in) {
     }
 
     else if (c == '#') {
-	c = getc(in);
+        /* read a boolean */
+        c = getc(in);
+
         switch (c) {
             case 't':
                 return true;
@@ -153,6 +196,37 @@ object* read(FILE *in) {
                 fprintf(stderr, "unknown boolean literal\n");
                 exit(1);
         }
+    }
+
+    else if (c == '"') {
+        /* read a string */
+        i = 0;
+        while ((c = getc(in)) != '"') {
+            if (c == '\\') {
+                c = getc(in);
+                if (c == 'n') {
+                    c = '\n';
+                }
+            }
+
+            if (c == EOF) {
+                fprintf(stderr, "non-terminated string literal\n");
+                exit(1);
+            }
+
+            if (i < BUFFER_MAX - 1) {
+                /* - 1 becaue of the \0 */
+                buffer[i++] = c;
+            }
+
+            else {
+                fprintf(stderr,
+                        "string too long; maximum length is %d\n", BUFFER_MAX);
+                exit(1);
+            }
+        }
+        buffer[i] = '\0';
+        return make_string(buffer);
     }
 
     else {
@@ -173,12 +247,39 @@ object* eval(object *exp) {
 /******************** PRINT ********************/
 
 void print(object *obj) {
+    char *str;
+
     switch (obj->type) {
         case FIXNUM:
             printf("%ld", obj->data.fixnum.value);
             break;
         case BOOLEAN:
             printf("#%c", is_true(obj) ? 't' : 'f');
+            break;
+        case CHARACTER:
+            str = obj->data.character.value;
+            putchar(*str);
+            break;
+        case STRING:
+            str = obj->data.string.value;
+            putchar('"');
+            while (*str != '\0') {
+                switch (*str) {
+                    case '\n':
+                        printf("\\n");
+                        break;
+                    case '\\':
+                        printf("\\\\");
+                        break;
+                    case '"':
+                        printf("\\\"");
+                        break;
+                    default:
+                        putchar(*str);
+                }
+                str++;
+            }
+            putchar('"');
             break;
         default:
             fprintf(stderr, "cannot print unknown type\n");
