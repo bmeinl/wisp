@@ -9,7 +9,7 @@ typedef enum { FALSE, TRUE } bool;
 
 /******************** MODEL ********************/
 
-typedef enum { FIXNUM, BOOLEAN, STRING } object_type;
+typedef enum { FIXNUM, BOOLEAN, STRING, NIL } object_type;
 
 typedef struct {
     object_type type;
@@ -55,6 +55,11 @@ bool is_fixnum(object *obj) {
 
 object *true;
 object *false;
+object *nil;
+
+bool is_nil(object *obj) {
+    return obj == nil;
+}
 
 bool is_boolean(object *obj) {
     return obj->type == BOOLEAN;
@@ -94,6 +99,9 @@ void init(void) {
     true = alloc_object();
     true->type = BOOLEAN;
     true->data.boolean.value = TRUE;
+
+    nil = alloc_object();
+    nil->type = NIL;
 }
 
 /******************** READ ********************/
@@ -126,6 +134,27 @@ void eat_whitespace(FILE *in) {
         ungetc(c, in);
         break;
     }
+}
+
+void peek_expected_delimiter(FILE *in) {
+    if (!is_delimiter(peek(in))) {
+        fprintf(stderr, "was expecting delimiter\n");
+        exit(1);
+    }
+}
+
+bool is_expected_string(FILE *in, char *str) {
+    int c;
+
+    while (*str != '\0') {
+        c = getc(in);
+        if (*str != c) {
+            return FALSE;
+        }
+        str++;
+    }
+
+    return TRUE;
 }
 
 object* read(FILE *in) {
@@ -209,6 +238,11 @@ object* read(FILE *in) {
         return make_string(buffer);
     }
 
+    else if (c == 'n' && is_expected_string(in, "il")) {
+        peek_expected_delimiter(in);
+        return nil;
+    }
+
     else {
         fprintf(stderr, "bad input. unexpected '%c'\n", c);
         exit(1);
@@ -256,6 +290,9 @@ void print(object *obj) {
                 str++;
             }
             putchar('"');
+            break;
+        case NIL:
+            printf("nil\n");
             break;
         default:
             fprintf(stderr, "cannot print unknown type\n");
