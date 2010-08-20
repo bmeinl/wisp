@@ -23,9 +23,9 @@ typedef struct {
         struct {
             char *value;
         } string;
-    	struct {
+        struct {
             char value;
-    	} character;
+        } character;
     } data;
 } object;
 
@@ -148,7 +148,7 @@ object* read_character(FILE *in) {
     
     c = getc(in);
 
-    switch(c){
+    switch(c) {
     case EOF:
         fprintf(stderr, "incomplete character literal\n");    
     }
@@ -203,8 +203,8 @@ object* read(FILE *in) {
         case '\\':
             return read_character(in);
         default:
-                fprintf(stderr, "unknown boolean literal\n");
-                exit(1);
+            fprintf(stderr, "unknown boolean literal\n");
+            exit(1);
         }
     }
     
@@ -260,39 +260,39 @@ void print(object *obj) {
     char *str;
 
     switch (obj->type) {
-        case FIXNUM:
-            printf("%ld", obj->data.fixnum.value);
-            break;
-        case BOOLEAN:
-            printf("#%c", is_true(obj) ? 't' : 'f');
-            break;
-        case CHARACTER:            
-            printf("#\\%c", obj->data.character.value);
-            break;
-        case STRING:
-            str = obj->data.string.value;
-            putchar('"');
-            while (*str != '\0') {
-                switch (*str) {
-                    case '\n':
-                        printf("\\n");
-                        break;
-                    case '\\':
-                        printf("\\\\");
-                        break;
-                    case '"':
-                        printf("\\\"");
-                        break;
-                    default:
-                        putchar(*str);
-                }
-                str++;
+    case FIXNUM:
+        printf("%ld", obj->data.fixnum.value);
+        break;
+    case BOOLEAN:
+        printf("#%c", is_true(obj) ? 't' : 'f');
+        break;
+    case CHARACTER:            
+        printf("#\\%c", obj->data.character.value);
+        break;
+    case STRING:
+        str = obj->data.string.value;
+        putchar('"');
+        while (*str != '\0') {
+            switch (*str) {
+            case '\n':
+                printf("\\n");
+                break;
+            case '\\':
+                printf("\\\\");
+                break;
+            case '"':
+                printf("\\\"");
+                break;
+            default:
+                putchar(*str);
             }
-            putchar('"');
-            break;
-        default:
-            fprintf(stderr, "cannot print unknown type\n");
-            exit(1);
+            str++;
+        }
+        putchar('"');
+        break;
+    default:
+        fprintf(stderr, "cannot print unknown type\n");
+        exit(1);
     }
 }
 
