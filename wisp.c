@@ -9,7 +9,11 @@ typedef enum { FALSE, TRUE } bool;
 
 /******************** MODEL ********************/
 
+<<<<<<< .merge_file_KAYL8F
 typedef enum { FIXNUM, BOOLEAN, STRING, CONS } object_type;
+=======
+typedef enum { FIXNUM, BOOLEAN, STRING, NIL, CONS } object_type;
+>>>>>>> .merge_file_iJ5DUF
 
 typedef struct object {
     object_type type;
@@ -60,6 +64,11 @@ bool is_fixnum(object *obj) {
 
 object *true;
 object *false;
+object *nil;
+
+bool is_nil(object *obj) {
+    return obj == nil;
+}
 
 bool is_boolean(object *obj) {
     return obj->type == BOOLEAN;
@@ -129,6 +138,9 @@ void init(void) {
     true = alloc_object();
     true->type = BOOLEAN;
     true->data.boolean.value = TRUE;
+
+    nil = alloc_object();
+    nil->type = NIL;
 }
 
 /******************** READ ********************/
@@ -163,6 +175,7 @@ void eat_whitespace(FILE *in) {
     }
 }
 
+<<<<<<< .merge_file_KAYL8F
 /* declaration required because `read` and `read_cons` are mutually recursive */
 object* read(FILE *in);
 
@@ -208,6 +221,27 @@ object* read_cons(FILE *in) {
         cdr = read_cons(in);
         return make_cons(car, cdr);
     }
+=======
+void peek_expected_delimiter(FILE *in) {
+    if (!is_delimiter(peek(in))) {
+        fprintf(stderr, "was expecting delimiter\n");
+        exit(1);
+    }
+}
+
+bool is_expected_string(FILE *in, char *str) {
+    int c;
+
+    while (*str != '\0') {
+        c = getc(in);
+        if (*str != c) {
+            return FALSE;
+        }
+        str++;
+    }
+
+    return TRUE;
+>>>>>>> .merge_file_iJ5DUF
 }
 
 object* read(FILE *in) {
@@ -291,9 +325,15 @@ object* read(FILE *in) {
         return make_string(buffer);
     }
 
+<<<<<<< .merge_file_KAYL8F
     else if (c == '(') {
         /* read cons/list */
         return read_cons(in);
+=======
+    else if (c == 'n' && is_expected_string(in, "il")) {
+        peek_expected_delimiter(in);
+        return nil;
+>>>>>>> .merge_file_iJ5DUF
     }
 
     else {
@@ -368,10 +408,16 @@ void print(object *obj) {
             }
             putchar('"');
             break;
+<<<<<<< .merge_file_KAYL8F
         case CONS:
             putchar('(');
             write_cons(obj);
             putchar(')');
+=======
+        case NIL:
+            printf("nil\n");
+            break;
+>>>>>>> .merge_file_iJ5DUF
         default:
             fprintf(stderr, "cannot print unknown type\n");
             exit(1);
