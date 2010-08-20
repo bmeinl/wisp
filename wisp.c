@@ -146,11 +146,12 @@ void eat_whitespace(FILE *in) {
 object* read_character(FILE *in) {
     int c;
     
-    c = getc(in);
+    c = getc(in);    
 
     switch(c) {
-    case EOF:
-        fprintf(stderr, "incomplete character literal\n");    
+        case EOF:
+            fprintf(stderr, "incomplete character literal\n");
+            exit(1);
     }
     return make_character(c);
 }
