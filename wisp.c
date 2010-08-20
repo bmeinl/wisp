@@ -9,11 +9,7 @@ typedef enum { FALSE, TRUE } bool;
 
 /******************** MODEL ********************/
 
-<<<<<<< .merge_file_KAYL8F
-typedef enum { FIXNUM, BOOLEAN, STRING, CONS } object_type;
-=======
 typedef enum { FIXNUM, BOOLEAN, STRING, NIL, CONS } object_type;
->>>>>>> .merge_file_iJ5DUF
 
 typedef struct object {
     object_type type;
@@ -175,7 +171,6 @@ void eat_whitespace(FILE *in) {
     }
 }
 
-<<<<<<< .merge_file_KAYL8F
 /* declaration required because `read` and `read_cons` are mutually recursive */
 object* read(FILE *in);
 
@@ -221,7 +216,8 @@ object* read_cons(FILE *in) {
         cdr = read_cons(in);
         return make_cons(car, cdr);
     }
-=======
+}
+
 void peek_expected_delimiter(FILE *in) {
     if (!is_delimiter(peek(in))) {
         fprintf(stderr, "was expecting delimiter\n");
@@ -241,7 +237,6 @@ bool is_expected_string(FILE *in, char *str) {
     }
 
     return TRUE;
->>>>>>> .merge_file_iJ5DUF
 }
 
 object* read(FILE *in) {
@@ -325,15 +320,14 @@ object* read(FILE *in) {
         return make_string(buffer);
     }
 
-<<<<<<< .merge_file_KAYL8F
     else if (c == '(') {
         /* read cons/list */
         return read_cons(in);
-=======
+    }
+
     else if (c == 'n' && is_expected_string(in, "il")) {
         peek_expected_delimiter(in);
         return nil;
->>>>>>> .merge_file_iJ5DUF
     }
 
     else {
@@ -357,23 +351,24 @@ object* eval(object *exp) {
 void print(object *obj);
 
 void print_cons(object *obj) {
-    object *car, *cdr;
+    object *car_obj;
+    object *cdr_obj;
 
-    car = car(obj);
-    cdr = cdr(obj);
+    car_obj = car(obj);
+    cdr_obj = cdr(obj);
 
-    print(car);
+    print(car_obj);
 
-    if (cdr->type == CONS) {
+    if (cdr_obj->type == CONS) {
         putchar(' ');
-        print_cons(cdr);
+        print_cons(cdr_obj);
     }
-    else if (cdr->type == NIL) {
+    else if (cdr_obj->type == NIL) {
         return;
     }
     else {
         printf(" . ");
-        print(cdr);
+        print(cdr_obj);
     }
 }
 
@@ -408,16 +403,14 @@ void print(object *obj) {
             }
             putchar('"');
             break;
-<<<<<<< .merge_file_KAYL8F
         case CONS:
             putchar('(');
-            write_cons(obj);
+            print_cons(obj);
             putchar(')');
-=======
-        case NIL:
-            printf("nil\n");
             break;
->>>>>>> .merge_file_iJ5DUF
+        case NIL:
+            printf("nil");
+            break;
         default:
             fprintf(stderr, "cannot print unknown type\n");
             exit(1);
