@@ -201,9 +201,7 @@ object* read(FILE *in) {
         case 'f':
             return false;
         case '\\':
-            c = getc(in);
-            putchar(c);
-            return read_character(in);            
+            return read_character(in);
         default:
                 fprintf(stderr, "unknown boolean literal\n");
                 exit(1);
@@ -268,8 +266,8 @@ void print(object *obj) {
         case BOOLEAN:
             printf("#%c", is_true(obj) ? 't' : 'f');
             break;
-        case CHARACTER:
-            putchar(CHARACTER);
+        case CHARACTER:            
+            printf("#\\%c", obj->data.character.value);
             break;
         case STRING:
             str = obj->data.string.value;
