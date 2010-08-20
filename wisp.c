@@ -316,7 +316,14 @@ object* read(FILE *in) {
         case 'f':
             return false;
         case '\\':
-            return read_character(in);
+            c = getc(in);
+            if (c == 's' && is_expected_string(in, "pace")) {
+                return read_character(in);
+            } else if (c == 'n' && is_expected_string(in, "ewline")) {
+                return read_character(in);
+            } else {
+                return read_character(in);
+            }
         default:
             fprintf(stderr, "unknown boolean literal\n");
             exit(1);
