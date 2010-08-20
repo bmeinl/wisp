@@ -7,4 +7,5 @@ wisp: wisp.o
 wisp.o: wisp.c
 	$(CC) $(FLAGS) -c wisp.c
 
-clean: rm wisp
+clean:
+	rm wisp wisp.o

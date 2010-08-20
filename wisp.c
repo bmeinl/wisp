@@ -9,23 +9,31 @@ typedef enum { FALSE, TRUE } bool;
 
 /******************** MODEL ********************/
 
-typedef enum { FIXNUM, BOOLEAN, STRING, CHARACTER } object_type;
+typedef enum { FIXNUM, BOOLEAN, STRING, CHARACTER, NIL, CONS } object_type;
 
-typedef struct {
+typedef struct object {
     object_type type;
     union {
         struct {
             long value;
         } fixnum;
+
         struct {
             bool value;
         } boolean;
-        struct {
-            char *value;
-        } string;
+
         struct {
             char value;
         } character;
+
+        struct {
+            char *value;
+        } string;
+
+        struct {
+            struct object *car;
+            struct object *cdr;
+        } cons;
     } data;
 } object;
 
@@ -56,6 +64,11 @@ bool is_fixnum(object *obj) {
 
 object *true;
 object *false;
+object *nil;
+
+bool is_nil(object *obj) {
+    return obj == nil;
+}
 
 bool is_boolean(object *obj) {
     return obj->type == BOOLEAN;
@@ -101,6 +114,36 @@ bool is_character(object *obj) {
     return obj->type == CHARACTER;
 }
 
+object* make_cons(object *car, object *cdr) {
+    object *obj;
+
+    obj = alloc_object();
+    obj->type = CONS;
+    obj->data.cons.car = car;
+    obj->data.cons.cdr = cdr;
+    return obj;
+}
+
+bool is_cons(object *obj) {
+    return obj->type == CONS;
+}
+
+object* car(object *obj) {
+    return obj->data.cons.car;
+}
+
+void set_car(object *obj, object *value) {
+    obj->data.cons.car = value;
+}
+
+object* cdr(object *obj) {
+    return obj->data.cons.cdr;
+}
+
+void set_cdr(object *obj, object *value) {
+    obj->data.cons.cdr = value;
+}
+
 void init(void) {
     false = alloc_object();
     false->type = BOOLEAN;
@@ -109,6 +152,9 @@ void init(void) {
     true = alloc_object();
     true->type = BOOLEAN;
     true->data.boolean.value = TRUE;
+
+    nil = alloc_object();
+    nil->type = NIL;
 }
 
 /******************** READ ********************/
@@ -156,6 +202,74 @@ object* read_character(FILE *in) {
     return make_character(c);
 }
 
+/* declaration required because `read` and `read_cons` are mutually recursive */
+object* read(FILE *in);
+
+object* read_cons(FILE *in) {
+    int c;
+    object *car, *cdr;
+
+    eat_whitespace(in);
+
+    c = getc(in);
+    if (c == ')') {
+        return nil;
+    }
+    ungetc(c, in);
+
+    car = read(in);
+
+    eat_whitespace(in);
+
+    c = getc(in);
+    if (c == '.') {
+        /* read improper list */
+        c = peek(in);
+        if (!is_delimiter(c)) {
+            fprintf(stderr, "was expecting delimiter\n");
+            exit(1);
+        }
+
+        cdr = read(in);
+
+        eat_whitespace(in);
+        c = getc(in);
+        if (c != ')') {
+            fprintf(stderr, "couldn't find matching )\n");
+            exit(1);
+        }
+
+        return make_cons(car, cdr);
+    }
+    else {
+        /* read list */
+        ungetc(c, in);
+        cdr = read_cons(in);
+        return make_cons(car, cdr);
+    }
+}
+
+void peek_expected_delimiter(FILE *in) {
+    if (!is_delimiter(peek(in))) {
+        fprintf(stderr, "was expecting delimiter\n");
+        exit(1);
+    }
+}
+
+bool is_expected_string(FILE *in, char *str) {
+    int c;
+
+    while (*str != '\0') {
+        c = getc(in);
+        if (*str != c) {
+            return FALSE;
+        }
+        str++;
+    }
+
+    return TRUE;
+}
+
 object* read(FILE *in) {
     int c;
     short sign = 1;
@@ -167,7 +281,7 @@ object* read(FILE *in) {
 
     c = getc(in);
 
-    if(isdigit(c) || (c == '-' && (isdigit(peek(in))))) {
+    if (isdigit(c) || (c == '-' && (isdigit(peek(in))))) {
         /* read a fixnum */
         if (c == '-') {
             sign = -1;
@@ -240,6 +354,47 @@ object* read(FILE *in) {
         return make_string(buffer);
     }
 
+    else if (c == '"') {
+        /* read a string */
+        i = 0;
+        while ((c = getc(in)) != '"') {
+            if (c == '\\') {
+                c = getc(in);
+                if (c == 'n') {
+                    c = '\n';
+                }
+            }
+
+            if (c == EOF) {
+                fprintf(stderr, "non-terminated string literal\n");
+                exit(1);
+            }
+
+            if (i < BUFFER_MAX - 1) {
+                /* - 1 becaue of the \0 */
+                buffer[i++] = c;
+            }
+
+            else {
+                fprintf(stderr,
+                        "string too long; maximum length is %d\n", BUFFER_MAX);
+                exit(1);
+            }
+        }
+        buffer[i] = '\0';
+        return make_string(buffer);
+    }
+
+    else if (c == '(') {
+        /* read cons/list */
+        return read_cons(in);
+    }
+
+    else if (c == 'n' && is_expected_string(in, "il")) {
+        peek_expected_delimiter(in);
+        return nil;
+    }
+
     else {
         fprintf(stderr, "bad input. unexpected '%c'\n", c);
         exit(1);
@@ -257,43 +412,76 @@ object* eval(object *exp) {
 
 /******************** PRINT ********************/
 
+/* declaration needed because `print` and `print_cons` are mutually recursive */
+void print(object *obj);
+
+void print_cons(object *obj) {
+    object *car_obj;
+    object *cdr_obj;
+
+    car_obj = car(obj);
+    cdr_obj = cdr(obj);
+
+    print(car_obj);
+
+    if (cdr_obj->type == CONS) {
+        putchar(' ');
+        print_cons(cdr_obj);
+    }
+    else if (cdr_obj->type == NIL) {
+        return;
+    }
+    else {
+        printf(" . ");
+        print(cdr_obj);
+    }
+}
+
 void print(object *obj) {
     char *str;
 
     switch (obj->type) {
-    case FIXNUM:
-        printf("%ld", obj->data.fixnum.value);
-        break;
-    case BOOLEAN:
-        printf("#%c", is_true(obj) ? 't' : 'f');
-        break;
-    case CHARACTER:            
-        printf("#\\%c", obj->data.character.value);
-        break;
-    case STRING:
-        str = obj->data.string.value;
-        putchar('"');
-        while (*str != '\0') {
-            switch (*str) {
-            case '\n':
-                printf("\\n");
-                break;
-            case '\\':
-                printf("\\\\");
-                break;
-            case '"':
-                printf("\\\"");
-                break;
-            default:
-                putchar(*str);
+            case FIXNUM:
+            printf("%ld", obj->data.fixnum.value);
+            break;
+        case BOOLEAN:
+            printf("#%c", is_true(obj) ? 't' : 'f');
+            break;
+        case CHARACTER:            
+            printf("#\\%c", obj->data.character.value);
+            break;
+        case STRING:
+            str = obj->data.string.value;
+            putchar('"');
+            while (*str != '\0') {
+                switch (*str) {
+                    case '\n':
+                        printf("\\n");
+                        break;
+                    case '\\':
+                        printf("\\\\");
+                        break;
+                    case '"':
+                        printf("\\\"");
+                        break;
+                    default:
+                        putchar(*str);
+                }
+                str++;
             }
-            str++;
-        }
-        putchar('"');
-        break;
-    default:
-        fprintf(stderr, "cannot print unknown type\n");
-        exit(1);
+            putchar('"');
+            break;
+        case CONS:
+            putchar('(');
+            print_cons(obj);
+            putchar(')');
+            break;
+        case NIL:
+            printf("nil");
+            break;
+        default:
+            fprintf(stderr, "cannot print unknown type\n");
+            exit(1);
     }
 }
 
