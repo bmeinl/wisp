@@ -150,7 +150,7 @@ object* read_character(FILE *in) {
 
     switch(c){
     case EOF:
-        fprintf(stderr, "incomplete character literal\n");
+        fprintf(stderr, "incomplete character literal\n");    
     }
     return make_character(c);
 }
@@ -201,37 +201,14 @@ object* read(FILE *in) {
         case 'f':
             return false;
         case '\\':
-            return read_character(in);          
+            c = getc(in);
+            putchar(c);
+            return read_character(in);            
         default:
                 fprintf(stderr, "unknown boolean literal\n");
                 exit(1);
         }
     }
-    
-    
-    /* else if (c == '\\') { */
-    /*     /\* read a char *\/         */
-    /*     i = 0; */
-    /*     while ((c = getc(in)) != '\n') { */
-    /*         if (c == '\\') { */
-    /*             c = getc(in); */
-    /*         } */
-
-
-    /*         if (i < BUFFER_MAX - 1) { */
-    /*             /\* - 1 because of the \0 *\/ */
-    /*             buffer[i++] = c; */
-    /*         } */
-
-    /*         else { */
-    /*             fprintf(stderr, */
-    /*                     "", BUFFER_MAX); */
-    /*             exit(1); */
-    /*         } */
-    /*     } */
-    /*     buffer[i] = '\0'; */
-    /*     return make_character(buffer);            */
-    /* } */
     
     else if (c == '"') {
         /* read a string */
