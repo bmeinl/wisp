@@ -24,7 +24,7 @@ typedef struct {
             char *value;
         } string;
     	struct {
-	        char value;
+            char value;
     	} character;
     } data;
 } object;
@@ -92,12 +92,8 @@ object* make_character(char value) {
 
     obj = alloc_object();
     obj->type = CHARACTER;
-    obj->data.character.value = malloc(1); /* 1 extra for \0 */
-    if (obj->data.character.value == NULL) {
-        fprintf(stderr, "out of memory\n");
-        exit(1);
-    }
-    strcpy(obj->data.character.value, value);
+    obj->data.character.value = value;
+
     return obj;
 }
 
@@ -188,16 +184,43 @@ object* read(FILE *in) {
         c = getc(in);
 
         switch (c) {
-            case 't':
-                return true;
-            case 'f':
-                return false;
-            default:
+        case 't':
+            return true;
+        case 'f':
+            return false;
+        case '\\':
+            fprintf(stdout, c);
+        default:
                 fprintf(stderr, "unknown boolean literal\n");
                 exit(1);
         }
     }
+    
+    
+    /* else if (c == '\\') { */
+    /*     /\* read a char *\/         */
+    /*     i = 0; */
+    /*     while ((c = getc(in)) != '\n') { */
+    /*         if (c == '\\') { */
+    /*             c = getc(in); */
+    /*         } */
 
+
+    /*         if (i < BUFFER_MAX - 1) { */
+    /*             /\* - 1 because of the \0 *\/ */
+    /*             buffer[i++] = c; */
+    /*         } */
+
+    /*         else { */
+    /*             fprintf(stderr, */
+    /*                     "", BUFFER_MAX); */
+    /*             exit(1); */
+    /*         } */
+    /*     } */
+    /*     buffer[i] = '\0'; */
+    /*     return make_character(buffer);            */
+    /* } */
+    
     else if (c == '"') {
         /* read a string */
         i = 0;
@@ -257,8 +280,7 @@ void print(object *obj) {
             printf("#%c", is_true(obj) ? 't' : 'f');
             break;
         case CHARACTER:
-            str = obj->data.character.value;
-            putchar(*str);
+            putchar(CHARACTER);
             break;
         case STRING:
             str = obj->data.string.value;
