@@ -9,9 +9,9 @@ typedef enum { FALSE, TRUE } bool;
 
 /******************** MODEL ********************/
 
-typedef enum { FIXNUM, BOOLEAN, STRING } object_type;
+typedef enum { FIXNUM, BOOLEAN, STRING, CONS } object_type;
 
-typedef struct {
+typedef struct object {
     object_type type;
     union {
         struct {
@@ -25,6 +25,11 @@ typedef struct {
         struct {
             char *value;
         } string;
+
+        struct {
+            struct object *car;
+            struct object *cdr;
+        } cons;
     } data;
 } object;
 
@@ -86,6 +91,36 @@ bool is_string(object *obj) {
     return obj->type == STRING;
 }
 
+object* make_cons(object *car, object *cdr) {
+    object *obj;
+
+    obj = alloc_object();
+    obj->type = CONS;
+    obj->data.cons.car = car;
+    obj->data.cons.cdr = cdr;
+    return obj;
+}
+
+bool is_cons(object *obj) {
+    return obj->type == CONS;
+}
+
+object* car(object *obj) {
+    return obj->data.cons.car;
+}
+
+void set_car(object *obj, object *value) {
+    obj->data.cons.car = value;
+}
+
+object* cdr(object *obj) {
+    return obj->data.cons.cdr;
+}
+
+void set_cdr(object *obj, object *value) {
+    obj->data.cons.cdr = value;
+}
+
 void init(void) {
     false = alloc_object();
     false->type = BOOLEAN;
@@ -128,6 +163,53 @@ void eat_whitespace(FILE *in) {
     }
 }
 
+/* declaration required because `read` and `read_cons` are mutually recursive */
+object* read(FILE *in);
+
+object* read_cons(FILE *in) {
+    int c;
+    object *car, *cdr;
+
+    eat_whitespace(in);
+
+    c = getc(in);
+    if (c == ')') {
+        return nil;
+    }
+    ungetc(c, in);
+
+    car = read(in);
+
+    eat_whitespace(in);
+
+    c = getc(in);
+    if (c == '.') {
+        /* read improper list */
+        c = peek(in);
+        if (!is_delimiter(c)) {
+            fprintf(stderr, "was expecting delimiter\n");
+            exit(1);
+        }
+
+        cdr = read(in);
+
+        eat_whitespace(in);
+        c = getc(in);
+        if (c != ')') {
+            fprintf(stderr, "couldn't find matching )\n");
+            exit(1);
+        }
+
+        return make_cons(car, cdr);
+    }
+    else {
+        /* read list */
+        ungetc(c, in);
+        cdr = read_cons(in);
+        return make_cons(car, cdr);
+    }
+}
+
 object* read(FILE *in) {
     int c;
     short sign = 1;
@@ -139,7 +221,7 @@ object* read(FILE *in) {
 
     c = getc(in);
 
-    if(isdigit(c) || (c == '-' && (isdigit(peek(in))))) {
+    if (isdigit(c) || (c == '-' && (isdigit(peek(in))))) {
         /* read a fixnum */
         if (c == '-') {
             sign = -1;
@@ -209,6 +291,11 @@ object* read(FILE *in) {
         return make_string(buffer);
     }
 
+    else if (c == '(') {
+        /* read cons/list */
+        return read_cons(in);
+    }
+
     else {
         fprintf(stderr, "bad input. unexpected '%c'\n", c);
         exit(1);
@@ -225,6 +312,30 @@ object* eval(object *exp) {
 }
 
 /******************** PRINT ********************/
+
+/* declaration needed because `print` and `print_cons` are mutually recursive */
+void print(object *obj);
+
+void print_cons(object *obj) {
+    object *car, *cdr;
+
+    car = car(obj);
+    cdr = cdr(obj);
+
+    print(car);
+
+    if (cdr->type == CONS) {
+        putchar(' ');
+        print_cons(cdr);
+    }
+    else if (cdr->type == NIL) {
+        return;
+    }
+    else {
+        printf(" . ");
+        print(cdr);
+    }
+}
 
 void print(object *obj) {
     char *str;
@@ -257,6 +368,10 @@ void print(object *obj) {
             }
             putchar('"');
             break;
+        case CONS:
+            putchar('(');
+            write_cons(obj);
+            putchar(')');
         default:
             fprintf(stderr, "cannot print unknown type\n");
             exit(1);
