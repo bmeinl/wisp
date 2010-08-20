@@ -143,6 +143,18 @@ void eat_whitespace(FILE *in) {
     }
 }
 
+object* read_character(FILE *in) {
+    int c;
+    
+    c = getc(in);
+
+    switch(c){
+    case EOF:
+        fprintf(stderr, "incomplete character literal\n");
+    }
+    return make_character(c);
+}
+
 object* read(FILE *in) {
     int c;
     short sign = 1;
@@ -189,7 +201,7 @@ object* read(FILE *in) {
         case 'f':
             return false;
         case '\\':
-            fprintf(stdout, c);
+            return read_character(in);          
         default:
                 fprintf(stderr, "unknown boolean literal\n");
                 exit(1);
