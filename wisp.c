@@ -318,11 +318,11 @@ object* read(FILE *in) {
         case '\\':
             c = getc(in);
             if (c == 's' && is_expected_string(in, "pace")) {
-                return read_character(in);
+                return make_character(' ');
             } else if (c == 'n' && is_expected_string(in, "ewline")) {
-                return read_character(in);
+                return make_character('\n');
             } else {
-                return read_character(in);
+                return make_character(c);
             }
         default:
             fprintf(stderr, "unknown boolean literal\n");
