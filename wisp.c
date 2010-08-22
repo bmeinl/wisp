@@ -189,17 +189,45 @@ void eat_whitespace(FILE *in) {
     }
 }
 
+void peek_expected_delimiter(FILE *in) {
+    if (!is_delimiter(peek(in))) {
+        fprintf(stderr, "was expecting delimiter\n");
+        exit(1);
+    }
+}
+
+bool is_expected_string(FILE *in, char *str) {
+    int c;
+
+    while (*str != '\0') {
+        c = getc(in);
+        if (*str != c) {
+            return FALSE;
+        }
+        str++;
+    }
+
+    return TRUE;
+}
+
 object* read_character(FILE *in) {
     int c;
     
+    fprintf(stderr, getc(in));
     c = getc(in);    
-
     switch(c) {
         case EOF:
             fprintf(stderr, "incomplete character literal\n");
             exit(1);
+        case '\\':
+                    if (c == 's' && is_expected_string(in, "pace")) {
+                        return make_character(' ');
+                    } else if (c == 'n' && is_expected_string(in, "ewline")) {
+                        return make_character('\n');
+                    }
+        default:
+            return make_character(c);
     }
-    return make_character(c);
 }
 
 /* declaration required because `read` and `read_cons` are mutually recursive */
@@ -249,27 +277,6 @@ object* read_cons(FILE *in) {
     }
 }
 
-void peek_expected_delimiter(FILE *in) {
-    if (!is_delimiter(peek(in))) {
-        fprintf(stderr, "was expecting delimiter\n");
-        exit(1);
-    }
-}
-
-bool is_expected_string(FILE *in, char *str) {
-    int c;
-
-    while (*str != '\0') {
-        c = getc(in);
-        if (*str != c) {
-            return FALSE;
-        }
-        str++;
-    }
-
-    return TRUE;
-}
-
 object* read(FILE *in) {
     int c;
     short sign = 1;
@@ -285,8 +292,7 @@ object* read(FILE *in) {
         /* read a fixnum */
         if (c == '-') {
             sign = -1;
-        }
-        else {
+        } else {
             ungetc(c, in);
         }
 
@@ -299,8 +305,7 @@ object* read(FILE *in) {
         if (is_delimiter(c)) {
             ungetc(c, in);
             return make_fixnum(num);
-        }
-        else {
+        } else {
             fprintf(stderr, "number not followed by delimiter\n");
             exit(1);
         }
@@ -316,14 +321,7 @@ object* read(FILE *in) {
         case 'f':
             return false;
         case '\\':
-            c = getc(in);
-            if (c == 's' && is_expected_string(in, "pace")) {
-                return make_character(' ');
-            } else if (c == 'n' && is_expected_string(in, "ewline")) {
-                return make_character('\n');
-            } else {
-                return make_character(c);
-            }
+            return read_character(in);
         default:
             fprintf(stderr, "unknown boolean literal\n");
             exit(1);
