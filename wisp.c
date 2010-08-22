@@ -212,18 +212,20 @@ bool is_expected_string(FILE *in, char *str) {
 
 object* read_character(FILE *in) {
     int c;
-    
-    fprintf(stderr, getc(in));
     c = getc(in);    
+
     switch(c) {
         case EOF:
             fprintf(stderr, "incomplete character literal\n");
             exit(1);
         case '\\':
-                    if (c == 's' && is_expected_string(in, "pace")) {
-                        return make_character(' ');
+            c = getc(in);
+            if (c == 's' && is_expected_string(in, "pace")) {
+                        c = ' ';
+                        return make_character(c);
                     } else if (c == 'n' && is_expected_string(in, "ewline")) {
-                        return make_character('\n');
+                        c = '\n';
+                        return make_character(c);
                     }
         default:
             return make_character(c);
@@ -321,6 +323,7 @@ object* read(FILE *in) {
         case 'f':
             return false;
         case '\\':
+            ungetc(c,in);
             return read_character(in);
         default:
             fprintf(stderr, "unknown boolean literal\n");
