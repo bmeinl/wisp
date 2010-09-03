@@ -389,9 +389,7 @@ object* read(FILE *in) {
             if (i < BUFFER_MAX - 1) {
                 /* - 1 becaue of the \0 */
                 buffer[i++] = c;
-            }
-
-            else {
+            } else {
                 fprintf(stderr,
                         "string too long; maximum length is %d\n", BUFFER_MAX);
                 exit(1);
@@ -399,28 +397,20 @@ object* read(FILE *in) {
         }
         buffer[i] = '\0';
         return make_string(buffer);
-    }
-
-    else if (c == '(') {
-        eat_whitespace(in);
-        c = getc(in);
+    } else if (c == '(') {
+            /*        eat_whitespace(in); */
+                
+        /* c = getc(in); */
         if (c == ')') {
             return nil_list;
-        } else {
-            fprintf(stderr, "unexpected character '%c'. "
-                    "Expected ')' found '%c'\n", c, c);
-            exit(1);
-        }        
-        /* read cons/list */
-        return read_cons(in);
-    }
-
-    else if (c == 'n' && is_expected_string(in, "il")) {
+        } else {            
+            /* read cons/list */
+            return read_cons(in);
+        }
+    } else if (c == 'n' && (in, "il")) {
         peek_expected_delimiter(in);
         return nil;
-    }
-
-    else {
+    } else {
         fprintf(stderr, "bad input. unexpected '%c'\n", c);
         exit(1);
     }
@@ -465,10 +455,7 @@ void print_cons(object *obj) {
 void print(object *obj) {
     char *str;
 
-    switch (obj->type) {
-        case NIL_LIST:
-            printf("()");
-            break;            
+    switch (obj->type) {  
         case FIXNUM:
             printf("%ld", obj->data.fixnum.value);
             break;
@@ -507,6 +494,9 @@ void print(object *obj) {
         case NIL:
             printf("nil");
             break;
+        case NIL_LIST:
+            printf("()");
+            break;
         default:
             fprintf(stderr, "cannot print unknown type\n");
             exit(1);
@@ -515,16 +505,19 @@ void print(object *obj) {
 
 /******************** REPL ********************/
 
-int main(void) {
+int main(void) {    
     printf("Welcome to Walrus Lisp. Use ctrl-c to exit.\n");
-
+    object* var;
+    
     init();
 
     while (1) {
-        printf("> ");
-        print(eval(read(stdin)));
+        printf("||  ");
+        var = read(stdin);
+        printf("==> ");
+        print(var);        
         printf("\n");
     }
-
+    
     return 0;
 }
