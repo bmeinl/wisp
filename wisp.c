@@ -9,7 +9,8 @@ typedef enum { FALSE, TRUE } bool;
 
 /******************** MODEL ********************/
 
-typedef enum { FIXNUM, BOOLEAN, STRING, CHARACTER, NIL, CONS } object_type;
+typedef enum {FIXNUM, BOOLEAN, STRING, CHARACTER,
+              NIL, NIL_LIST, CONS} object_type;
 
 typedef struct object {
     object_type type;
@@ -29,7 +30,6 @@ typedef struct object {
         struct {
             char *value;
         } string;
-
         struct {
             struct object *car;
             struct object *cdr;
@@ -65,9 +65,14 @@ bool is_fixnum(object *obj) {
 object *true;
 object *false;
 object *nil;
-
+object *nil_list;
+        
 bool is_nil(object *obj) {
     return obj == nil;
+}
+
+bool is_nil_list(object *obj) {
+    return obj == nil_list;
 }
 
 bool is_boolean(object *obj) {
@@ -144,7 +149,7 @@ void set_cdr(object *obj, object *value) {
     obj->data.cons.cdr = value;
 }
 
-void init(void) {
+void init(void) {    
     false = alloc_object();
     false->type = BOOLEAN;
     false->data.boolean.value = FALSE;
@@ -155,6 +160,9 @@ void init(void) {
 
     nil = alloc_object();
     nil->type = NIL;
+
+    nil_list = alloc_object();
+    nil_list->type = NIL_LIST;
 }
 
 /******************** READ ********************/
@@ -394,6 +402,15 @@ object* read(FILE *in) {
     }
 
     else if (c == '(') {
+        eat_whitespace(in);
+        c = getc(in);
+        if (c == ')') {
+            return nil_list;
+        } else {
+            fprintf(stderr, "unexpected character '%c'. "
+                    "Expected ')' found '%c'\n", c, c);
+            exit(1);
+        }        
         /* read cons/list */
         return read_cons(in);
     }
@@ -449,13 +466,16 @@ void print(object *obj) {
     char *str;
 
     switch (obj->type) {
-            case FIXNUM:
+        case NIL_LIST:
+            printf("()");
+            break;            
+        case FIXNUM:
             printf("%ld", obj->data.fixnum.value);
             break;
         case BOOLEAN:
             printf("#%c", is_true(obj) ? 't' : 'f');
             break;
-        case CHARACTER:            
+        case CHARACTER:        
             printf("#\\%c", obj->data.character.value);
             break;
         case STRING:
